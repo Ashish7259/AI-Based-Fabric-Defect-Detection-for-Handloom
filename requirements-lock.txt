@@ -1,0 +1,35 @@
+# HFDS2 Locked Dependencies - GPU+PyTorch 2.5.1+cu121 with Python 3.11
+# This file ensures reproducible builds and avoids breaking dependency conflicts
+
+# Deep Learning Framework - PyTorch with CUDA 12.1 support
+torch==2.5.1+cu121
+torchvision==0.20.1+cu121
+torchaudio==2.5.1+cu121
+
+# Numerical & Data Science - NumPy 1.26.4 for PyTorch compatibility
+numpy==1.26.4
+scipy==1.15.3
+scikit-learn==1.7.2
+pandas==2.0.0
+
+# Computer Vision & Image Processing
+opencv-python==4.8.1.78
+Pillow==12.2.0
+
+# Data Visualization & Plotting
+matplotlib==3.10.8
+seaborn==0.12.0
+
+# API Backend & Web GUI Services
+fastapi==0.100.0
+uvicorn==0.23.0
+pydantic==2.0.0
+python-multipart==0.0.6
+requests==2.31.0
+
+# Progress Tracking & Utilities
+tqdm==4.65.0
+
+# Utilities
+joblib==1.5.3
+threadpoolctl==3.6.0

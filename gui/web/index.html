@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Handloom AI Fabric Defect Detection System</title>
+    <!-- Modern Google Fonts & FontAwesome -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Top Glassmorphism Navigation Bar -->
+        <header class="app-header">
+            <div class="logo-group">
+                <div class="logo-icon">
+                    <i class="fa-solid fa-microchip"></i>
+                </div>
+                <div class="title-meta">
+                    <h1>HANDLOOM FABRIC AI INSPECTOR</h1>
+                    <p class="subtitle">CNN + ResNet-50 Soft Voting Ensemble & IoT Conveyor Control</p>
+                </div>
+            </div>
+
+            <div class="header-status-group">
+                <div class="status-badge live-status" id="aiStatusBadge">
+                    <span class="status-dot pulsing"></span>
+                    <span id="aiStatusText">AI ACTIVE</span>
+                </div>
+
+                <div class="status-badge mode-badge" id="simModeBadge">
+                    <i class="fa-solid fa-vial"></i>
+                    <span id="simModeText">SIMULATION MODE</span>
+                </div>
+
+                <div class="status-badge motor-badge" id="motorStatusBadge">
+                    <i class="fa-solid fa-dharmachakra spin-icon" id="motorSpinner"></i>
+                    <span id="motorStatusText">CONVEYOR RUNNING</span>
+                </div>
+
+                <button class="btn btn-icon" id="settingsBtn" title="System Settings">
+                    <i class="fa-solid fa-sliders"></i>
+                </button>
+            </div>
+        </header>
+
+        <!-- Main Dashboard Content Grid -->
+        <main class="dashboard-grid">
+            <!-- Left Column: Inspection Canvas & Input Selectors -->
+            <section class="left-panel">
+                <div class="card viewport-card">
+                    <div class="card-header">
+                        <div class="tab-group">
+                            <button class="tab-btn active" id="tabSample"><i class="fa-solid fa-flask"></i> Test Dataset Samples</button>
+                            <button class="tab-btn" id="tabUpload"><i class="fa-solid fa-upload"></i> Upload Image</button>
+                            <button class="tab-btn" id="tabCamera"><i class="fa-solid fa-camera"></i> Live Webcam</button>
+                        </div>
+                        <div class="view-mode-group">
+                            <span class="fps-counter" id="fpsDisplay">FPS: 30</span>
+                            <div class="toggle-group">
+                                <button class="toggle-btn active" id="viewModeAfter" title="Show Bounding Boxes & Detections">After</button>
+                                <button class="toggle-btn" id="viewModeBefore" title="Show Raw Fabric Frame Only">Before</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="viewport-wrapper" id="viewportWrapper">
+                        <canvas id="inspectionCanvas"></canvas>
+
+                        <!-- Analysis Progress Spinner Overlay -->
+                        <div class="analysis-indicator hidden" id="analysisIndicator">
+                            <div class="spinner-content">
+                                <i class="fa-solid fa-circle-notch fa-spin"></i>
+                                <span>AI RUNNING INFERENCE...</span>
+                            </div>
+                        </div>
+
+
+
+                        <!-- Empty State Helper / Drag Drop Zone -->
+                        <div class="empty-state" id="emptyState">
+                            <i class="fa-solid fa-cloud-arrow-up drag-icon"></i>
+                            <p class="drag-text" id="emptyStateMainText">Drag & Drop Fabric Image Here</p>
+                            <span class="or-separator" id="emptyStateOr">- OR -</span>
+                            <p class="select-text" id="emptyStateSubText">Select a test sample below or click "Browse Image File"</p>
+                        </div>
+                    </div>
+
+                    <!-- Input Controls Bar -->
+                    <div class="viewport-controls">
+                        <input type="file" id="fileInput" accept="image/*" class="hidden">
+                        <button class="btn btn-primary" id="selectUploadBtn">
+                            <i class="fa-solid fa-folder-open"></i> Browse Image File
+                        </button>
+                        <button class="btn btn-secondary" id="toggleWebcamBtn">
+                            <i class="fa-solid fa-video"></i> Start Browser Webcam
+                        </button>
+                        <button class="btn btn-secondary" id="toggleOpencvCamBtn" title="Direct Python OpenCV Camera Stream">
+                            <i class="fa-solid fa-camera-retro"></i> Direct OpenCV Camera
+                        </button>
+                        <button class="btn btn-warning" id="simStopBtn">
+                            <i class="fa-solid fa-hand"></i> Trigger Motor Stop (1.25s)
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Detected Defects Checklist Panel -->
+                <div class="card defects-checklist-card">
+                    <div class="card-header">
+                        <h3><i class="fa-solid fa-list-check"></i> Frame Defects Checklist (<span id="defectChecklistCount">0</span> Detected)</h3>
+                        <span class="badge warning-badge" id="defectChecklistBadge">No Defects</span>
+                    </div>
+                    <div class="defects-checklist-container" id="defectChecklistContainer">
+                        <div class="checklist-empty"><i class="fa-solid fa-shield-cat"></i> No defects detected in current frame.</div>
+                    </div>
+                </div>
+
+                <!-- Selected Defect Details Card -->
+                <div class="card defect-details-card hidden" id="defectDetailsCard">
+                    <div class="card-header">
+                        <h3><i class="fa-solid fa-circle-info"></i> Selected Defect Details</h3>
+                        <span class="badge info-badge" id="detailsActiveBadge">No Selection</span>
+                    </div>
+                    <div class="defect-details-container">
+                        <div class="details-zoom-box">
+                            <canvas id="defectZoomCanvas"></canvas>
+                            <span class="zoom-tag">ZOOM VIEW</span>
+                        </div>
+                        <div class="details-info-table">
+                            <div class="details-row">
+                                <span class="lbl">Defect Type:</span>
+                                <span class="val" id="detailsType">Hole</span>
+                            </div>
+                            <div class="details-row">
+                                <span class="lbl">Confidence:</span>
+                                <span class="val" id="detailsConfidence">94.2%</span>
+                            </div>
+                            <div class="details-row">
+                                <span class="lbl">Position (X, Y):</span>
+                                <span class="val" id="detailsPosition">X: 198, Y: 69</span>
+                            </div>
+                            <div class="details-row">
+                                <span class="lbl">Box Size:</span>
+                                <span class="val" id="detailsSize">224 × 224</span>
+                            </div>
+                            <div class="details-row">
+                                <span class="lbl">Conveyor Action:</span>
+                                <span class="val highlight-action" id="detailsAction">Halt Motor (1.25s)</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Test Dataset Samples Gallery -->
+                <div class="card samples-card">
+                    <div class="card-header">
+                        <h3><i class="fa-solid fa-boxes-stacked"></i> Test Dataset Sample Fabric Selector</h3>
+                        <span class="badge info-badge">Untouched Test Images</span>
+                    </div>
+                    <div class="samples-grid" id="samplesContainer">
+                        <div class="loading-spinner"><i class="fa-solid fa-circle-notch fa-spin"></i> Loading test set samples...</div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Right Column: Model Probabilities, Hardware Telemetry & Logs -->
+            <section class="right-panel">
+                <!-- System Hardware & Model Telemetry Tile -->
+                <div class="card telemetry-card">
+                    <div class="card-header">
+                        <h3><i class="fa-solid fa-server"></i> System Telemetry & Hardware Status</h3>
+                    </div>
+                    <div class="telemetry-grid">
+                        <div class="telemetry-item">
+                            <span class="label">Custom CNN Model</span>
+                            <span class="value success-text" id="statusCnn"><i class="fa-solid fa-check-circle"></i> Loaded (PyTorch)</span>
+                        </div>
+                        <div class="telemetry-item">
+                            <span class="label">ResNet-50 Model</span>
+                            <span class="value success-text" id="statusResnet"><i class="fa-solid fa-check-circle"></i> Loaded (Transfer Learning)</span>
+                        </div>
+                        <div class="telemetry-item">
+                            <span class="label">Soft Voting Ensemble</span>
+                            <span class="value success-text" id="statusEnsemble"><i class="fa-solid fa-check-circle"></i> Active</span>
+                        </div>
+                        <div class="telemetry-item">
+                            <span class="label">ESP32 Motor Controller</span>
+                            <span class="value warning-text" id="statusEsp32"><i class="fa-solid fa-wifi"></i> Simulated</span>
+                        </div>
+                        <div class="telemetry-item">
+                            <span class="label">Hardware Mode</span>
+                            <span class="value info-text" id="statusMode">Simulation Active</span>
+                        </div>
+                        <div class="telemetry-item">
+                            <span class="label">Compute Hardware</span>
+                            <span class="value" id="statusDevice">CUDA GPU / CPU</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Soft-Voting Probability Breakdown Card -->
+                <div class="card probability-card">
+                    <div class="card-header">
+                        <h3><i class="fa-solid fa-chart-bar"></i> Soft-Voting Ensemble Probabilities</h3>
+                        <span class="badge" id="activeClassBadge">Global: Normal</span>
+                    </div>
+
+                    <div class="probability-bars">
+                        <!-- Normal Bar -->
+                        <div class="prob-group">
+                            <div class="prob-labels">
+                                <span class="cls-name"><i class="fa-solid fa-shield-halved normal-color"></i> Normal</span>
+                                <span class="cls-pct" id="pctNormal">0.0%</span>
+                            </div>
+                            <div class="bar-track">
+                                <div class="bar-fill cnn-bar" id="barCnnNormal" style="width: 0%" title="Custom CNN"></div>
+                                <div class="bar-fill resnet-bar" id="barResnetNormal" style="width: 0%" title="ResNet-50"></div>
+                                <div class="bar-fill ensemble-bar" id="barEnsembleNormal" style="width: 0%" title="Soft Voting Ensemble"></div>
+                            </div>
+                        </div>
+
+                        <!-- Hole Bar -->
+                        <div class="prob-group">
+                            <div class="prob-labels">
+                                <span class="cls-name"><i class="fa-solid fa-circle-dot hole-color"></i> Hole</span>
+                                <span class="cls-pct" id="pctHole">0.0%</span>
+                            </div>
+                            <div class="bar-track">
+                                <div class="bar-fill cnn-bar" id="barCnnHole" style="width: 0%"></div>
+                                <div class="bar-fill resnet-bar" id="barResnetHole" style="width: 0%"></div>
+                                <div class="bar-fill ensemble-bar" id="barEnsembleHole" style="width: 0%"></div>
+                            </div>
+                        </div>
+
+                        <!-- Stain Bar -->
+                        <div class="prob-group">
+                            <div class="prob-labels">
+                                <span class="cls-name"><i class="fa-solid fa-droplet stain-color"></i> Stain</span>
+                                <span class="cls-pct" id="pctStain">0.0%</span>
+                            </div>
+                            <div class="bar-track">
+                                <div class="bar-fill cnn-bar" id="barCnnStain" style="width: 0%"></div>
+                                <div class="bar-fill resnet-bar" id="barResnetStain" style="width: 0%"></div>
+                                <div class="bar-fill ensemble-bar" id="barEnsembleStain" style="width: 0%"></div>
+                            </div>
+                        </div>
+
+                        <!-- Weaving Error Bar -->
+                        <div class="prob-group">
+                            <div class="prob-labels">
+                                <span class="cls-name"><i class="fa-solid fa-lines-leaning weaving-color"></i> Weaving Error</span>
+                                <span class="cls-pct" id="pctWeaving">0.0%</span>
+                            </div>
+                            <div class="bar-track">
+                                <div class="bar-fill cnn-bar" id="barCnnWeaving" style="width: 0%"></div>
+                                <div class="bar-fill resnet-bar" id="barResnetWeaving" style="width: 0%"></div>
+                                <div class="bar-fill ensemble-bar" id="barEnsembleWeaving" style="width: 0%"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bar-legend">
+                        <span><strong class="cnn-dot"></strong> Custom CNN</span>
+                        <span><strong class="resnet-dot"></strong> ResNet-50</span>
+                        <span><strong class="ensemble-dot"></strong> Soft Voting Ensemble</span>
+                    </div>
+                </div>
+
+                <!-- Live Debug Information Panel -->
+                <div class="card debug-card" id="debugInfoCard">
+                    <div class="card-header">
+                        <h3><i class="fa-solid fa-bug"></i> Live Inference Debug</h3>
+                        <span class="badge info-badge" id="debugEventBadge">Event: —</span>
+                    </div>
+                    <div class="debug-grid">
+                        <div class="debug-row">
+                            <span class="debug-lbl">Frame ID / Time</span>
+                            <span class="debug-val" id="dbgFrameId">—</span>
+                        </div>
+                        <div class="debug-row">
+                            <span class="debug-lbl">Inference Latency</span>
+                            <span class="debug-val" id="dbgLatency">—</span>
+                        </div>
+                        <div class="debug-row">
+                            <span class="debug-lbl">CNN Raw Model</span>
+                            <span class="debug-val" id="dbgCnnTop">—</span>
+                        </div>
+                        <div class="debug-row">
+                            <span class="debug-lbl">ResNet-50 Model</span>
+                            <span class="debug-val" id="dbgResnetTop">—</span>
+                        </div>
+                        <div class="debug-row">
+                            <span class="debug-lbl">Soft-Voting Ensemble</span>
+                            <span class="debug-val" id="dbgEnsembleTop">—</span>
+                        </div>
+                        <div class="debug-row">
+                            <span class="debug-lbl">Raw Regions / Accepted</span>
+                            <span class="debug-val" id="dbgRawRegions">—</span>
+                        </div>
+                        <div class="debug-row">
+                            <span class="debug-lbl">Loc. Rejected / Unique</span>
+                            <span class="debug-val danger-val" id="dbgLocRejected">—</span>
+                        </div>
+                        <div class="debug-row">
+                            <span class="debug-lbl">Verified Frame Status</span>
+                            <span class="debug-val" id="dbgGlobalPred">—</span>
+                        </div>
+                        <div class="debug-row">
+                            <span class="debug-lbl">Localization State</span>
+                            <span class="debug-val" id="dbgLocState">—</span>
+                        </div>
+                        <div class="debug-row">
+                            <span class="debug-lbl">Temporal Tracker</span>
+                            <span class="debug-val" id="dbgTemporal">—</span>
+                        </div>
+                        <div class="debug-row">
+                            <span class="debug-lbl">Diagnostic Info</span>
+                            <span class="debug-val" id="dbgRejection" style="font-size: 10.5px; line-height: 1.2; word-break: break-word; text-align: right; max-width: 140px;">—</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Statistics Counters Tile -->
+                <div class="card stats-card">
+                    <div class="card-header">
+                        <h3><i class="fa-solid fa-calculator"></i> Inspection Statistics</h3>
+                    </div>
+                    <div class="stats-grid">
+                        <div class="stat-box">
+                            <span class="num" id="statTotal">0</span>
+                            <span class="lbl">Inspected Frames</span>
+                        </div>
+                        <div class="stat-box normal-box">
+                            <span class="num" id="statNormal">0</span>
+                            <span class="lbl">Normal Frames</span>
+                        </div>
+                        <div class="stat-box current-defect-box">
+                            <span class="num" id="statCurrentDefects" style="color: var(--accent-cyan);">0</span>
+                            <span class="lbl">Current Defects</span>
+                        </div>
+                        <div class="stat-box defect-box">
+                            <span class="num" id="statSessionDefects">0</span>
+                            <span class="lbl">Session Defects</span>
+                        </div>
+                        <div class="stat-box hole-box">
+                            <span class="num" id="statHoles">0</span>
+                            <span class="lbl">Holes</span>
+                        </div>
+                        <div class="stat-box stain-box">
+                            <span class="num" id="statStains">0</span>
+                            <span class="lbl">Stains</span>
+                        </div>
+                        <div class="stat-box weaving-box">
+                            <span class="num" id="statWeaving">0</span>
+                            <span class="lbl">Weaving Errors</span>
+                        </div>
+                    </div>
+                    <div class="card-actions" style="margin-top: 14px; display: flex; gap: 8px; border-top: 1px solid var(--border-color); padding-top: 12px;">
+                        <button class="btn btn-secondary" id="btnExportCsv" style="flex: 1; padding: 8px 10px; font-size: 11px; justify-content: center;" title="Export Session Log as CSV">
+                            <i class="fa-solid fa-file-csv"></i> CSV Report
+                        </button>
+                        <button class="btn btn-secondary" id="btnExportJson" style="flex: 1; padding: 8px 10px; font-size: 11px; justify-content: center;" title="Export Session Data as JSON">
+                            <i class="fa-solid fa-file-code"></i> JSON Data
+                        </button>
+                        <button class="btn btn-secondary" id="btnSaveFrame" style="flex: 1; padding: 8px 10px; font-size: 11px; justify-content: center;" title="Save Marked Fabric Image">
+                            <i class="fa-solid fa-download"></i> Save Frame
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Detection History Log Table -->
+                <div class="card history-card">
+                    <div class="card-header">
+                        <h3><i class="fa-solid fa-clock-rotate-left"></i> Recent Defect Detections Log</h3>
+                    </div>
+                    <div class="table-wrapper">
+                        <table class="history-table">
+                            <thead>
+                                <tr>
+                                    <th>Time</th>
+                                    <th>Defect Type</th>
+                                    <th>Confidence</th>
+                                    <th>Regions</th>
+                                    <th>Action Taken</th>
+                                </tr>
+                            </thead>
+                            <tbody id="historyTableBody">
+                                <tr class="empty-row">
+                                    <td colspan="5">No defects detected in this session yet.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- Settings Modal -->
+    <div class="modal-backdrop hidden" id="settingsModal">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h2><i class="fa-solid fa-sliders"></i> System Settings & Configuration</h2>
+                <button class="close-btn" id="closeSettingsBtn">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="setting-row">
+                    <label>Confidence Threshold: <strong id="confVal">65%</strong></label>
+                    <input type="range" id="confSlider" min="10" max="95" value="65">
+                    <p class="help-text">Minimum ensemble probability required to declare a region defective.</p>
+                </div>
+
+                <div class="setting-row">
+                    <label>NMS IoU Threshold: <strong id="nmsVal">30%</strong></label>
+                    <input type="range" id="nmsSlider" min="10" max="80" value="30">
+                    <p class="help-text">Overlapping patches with IoU above this are merged into one detection. Lower = more aggressive merging.</p>
+                </div>
+
+                <div class="setting-row">
+                    <label>Region Crop Size: <strong>224 px</strong></label>
+                    <select id="regionSelect">
+                        <option value="224" selected>224 x 224 (Standard Model Input)</option>
+                        <option value="160">160 x 160 (Fine Grid)</option>
+                        <option value="320">320 x 320 (Coarse Grid)</option>
+                    </select>
+                </div>
+
+                <div class="setting-row">
+                    <label>Region Overlap: <strong>50%</strong></label>
+                    <select id="overlapSelect">
+                        <option value="0.25">25% Overlap</option>
+                        <option value="0.50" selected>50% Overlap (Recommended)</option>
+                        <option value="0.75">75% Overlap (High Density)</option>
+                    </select>
+                </div>
+
+                <div class="setting-row">
+                    <label>Conveyor Motor Stop Time: <strong id="motorTimeVal">1.5s</strong></label>
+                    <input type="range" id="motorTimeSlider" min="0.5" max="5.0" step="0.1" value="1.5">
+                    <p class="help-text">Duration the motor halts upon detecting a confirmed defect.</p>
+                </div>
+
+                <div class="setting-row">
+                    <label>Motor Cooldown: <strong id="cooldownVal">3.0s</strong></label>
+                    <input type="range" id="cooldownSlider" min="0" max="15" step="0.5" value="3">
+                    <p class="help-text">Seconds to wait after motor restarts before allowing a new stop (prevents same defect from repeatedly halting).</p>
+                </div>
+
+                <div class="setting-row checkbox-row">
+                    <label for="simToggle">Hardware Simulation Mode (Offline Testing)</label>
+                    <input type="checkbox" id="simToggle" checked>
+                </div>
+
+                <div class="setting-row checkbox-row">
+                    <label for="audioToggle">Enable Audio Alerts</label>
+                    <input type="checkbox" id="audioToggle" checked>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-primary" id="saveSettingsBtn">Save & Apply Settings</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="/static/app.js"></script>
+</body>
+</html>

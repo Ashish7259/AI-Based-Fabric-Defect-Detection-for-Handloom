@@ -1,0 +1,60 @@
+# =========================
+# 🐍 Python
+# =========================
+__pycache__/
+*.pyc
+*.pyo
+
+# Jupyter / Colab
+.ipynb_checkpoints/
+
+# =========================
+# 🧪 Virtual Environments
+# =========================
+handloom_env310/
+venv/
+env/
+
+# =========================
+# 📦 Dataset (IMPORTANT)
+# =========================
+dataset/
+final_dataset/
+processed_dataset/
+cropped/
+
+# =========================
+# 🤖 Models & Weights
+# =========================
+# *.pth
+# *.h5
+# *.pt
+
+# =========================
+# 📊 Outputs / Results
+# =========================
+*.png
+*.jpg
+*.jpeg
+*.csv
+*.json
+runs/
+logs/
+
+# =========================
+# 📁 System / IDE
+# =========================
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# =========================
+# 🔐 Environment files
+# =========================
+.env
+
+# =========================
+# 📦 Archives
+# =========================
+*.zip
